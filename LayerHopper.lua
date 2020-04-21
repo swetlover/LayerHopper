@@ -1,4 +1,5 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0")
+LayerHopper:RegisterChatCommand("lh", "ChatCommand")
 
 LayerHopper.options = {
 	name = "|TInterface\\AddOns\\LayerHopper\\Media\\swap:24:24:0:5|t LayerHopper v" .. GetAddOnMetadata("LayerHopper", "Version"),
@@ -7,11 +8,11 @@ LayerHopper.options = {
 	args = {
 		desc = {
 			type = "description",
-			name = "|CffDEDE42Layer Hopper Config (You can type /lh config to open this).",
+			name = "|CffDEDE42Layer Hopper Config (You can type /lh to open this).",
 			fontSize = "medium",
 			order = 1,
 		},
-		autoInvite = {
+		autoinvite = {
 			type = "toggle",
 			name = "Auto Invite",
 			desc = "Enable auto invites for layer switch requests in the guild.",
@@ -24,16 +25,16 @@ LayerHopper.options = {
 
 LayerHopper.optionDefaults = {
 	global = {
-		autoInvite = true,
+		autoinvite = true,
 	},
 }
 
 function LayerHopper:setAutoInvite(info, value)
-	self.db.global.autoInvite = value;
+	self.db.global.autoinvite = value;
 end
 
 function LayerHopper:getAutoInvite(info)
-	return self.db.global.autoInvite;
+	return self.db.global.autoinvite;
 end
 
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
@@ -48,26 +49,29 @@ function LayerHopper:OnInitialize()
 		text = "LayerHopper",
 		icon = "Interface/AddOns/LayerHopper/Media/swap",
 		OnClick = function(self, button)
-            if button == "LeftButton" then
-                LayerHopper:RequestLayerHop()
-            end
-        end,
-        OnEnter = function(self)
-        	local layerText = ""
+			if button == "LeftButton" then
+				LayerHopper:RequestLayerHop()
+			elseif button == "RightButton" then
+				LibStub("AceConfigDialog-3.0"):Open("LayerHopper")
+			end
+		end,
+		OnEnter = function(self)
+			local layerText = ""
 			if currentLayer == 0 then
 				layerText = "Unknown Layer"
 			else
 				layerText = "Current Layer: " .. currentLayer
 			end
-            GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-            GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r v"..GetAddOnMetadata("LayerHopper", "Version"))
-            GameTooltip:AddLine(layerText)
-            GameTooltip:AddLine("Left click to request a layer hop.")
-            GameTooltip:Show()
-        end,
-        OnLeave = function(self)
-            GameTooltip:Hide()
-        end
+			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+			GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r v"..GetAddOnMetadata("LayerHopper", "Version"))
+			GameTooltip:AddLine(layerText)
+			GameTooltip:AddLine("Left click to request a layer hop.")
+			GameTooltip:AddLine("Right click to access Layer Hopper settings.")
+			GameTooltip:Show()
+		end,
+		OnLeave = function(self)
+			GameTooltip:Hide()
+		end
 	})
 	LibStub("LibDBIcon-1.0"):Register("LayerHopper", self.LayerHopperLauncher, LayerHopperOptions)
 
@@ -116,7 +120,7 @@ function LayerHopper:RequestLayerHop()
 end
 
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	if not self.db.global.autoInvite or IsInInstance() then
+	if not self.db.global.autoinvite or IsInInstance() then
 		return
 	end
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
@@ -127,6 +131,10 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 			end
 		end
 	end
+end
+
+function LayerHopper:ChatCommand(input)
+  LibStub("AceConfigDialog-3.0"):Open("LayerHopper")
 end
 
 function UpdateLayerFromUnit(unit)
@@ -155,11 +163,11 @@ function UpdateLayerFromUnit(unit)
 end
 
 function IsGuidOwned(guid)
-    tip:SetOwner(WorldFrame, 'ANCHOR_NONE')
-    tip:SetHyperlink('unit:' .. guid or '')
-    local text = GuardianOwnerTooltipTextLeft2
-    local subtitle = text and text:GetText() or ''
-    return strfind(subtitle, "'s Companion")
+	tip:SetOwner(WorldFrame, 'ANCHOR_NONE')
+	tip:SetHyperlink('unit:' .. guid or '')
+	local text = GuardianOwnerTooltipTextLeft2
+	local subtitle = text and text:GetText() or ''
+	return strfind(subtitle, "'s Companion")
 end
 
 LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
