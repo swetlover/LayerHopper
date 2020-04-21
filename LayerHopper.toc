@@ -1,7 +1,7 @@
 ﻿## Interface: 11304
 ## Title: LayerHopper
 ## Author: DungFu
-## Version: 1.0.1
+## Version: 1.0.2
 ## Notes: Allows easy and automatic layer hopping within guild
 ## SavedVariablesPerCharacter: LayerHopperOptions
 

@@ -58,9 +58,9 @@ function LayerHopper:OnInitialize()
 		OnEnter = function(self)
 			local layerText = ""
 			if currentLayer == 0 then
-				layerText = "Unknown Layer"
+				layerText = "Unknown Layer. Target any NPC in Orgrimmar to get current layer."
 			else
-				layerText = "Current Layer: " .. currentLayer
+				layerText = "Current Layer Id: " .. currentLayer
 			end
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 			GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r v"..GetAddOnMetadata("LayerHopper", "Version"))
@@ -95,7 +95,7 @@ end
 function LayerHopper:GROUP_JOINED()
 	if not UnitIsGroupLeader("player") then
 		currentLayer = 0
-		LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
+		-- LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
 	end
 end
 
@@ -104,19 +104,14 @@ function LayerHopper:RequestLayerHop()
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in a group.")
 		return
 	elseif currentLayer == 0 then
-		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC to get current layer.")
+		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC in Orgrimmar to get current layer.")
 		return
 	elseif IsInInstance() then
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in an instance or battleground.")
 		return
 	end
-	if currentLayer == 1 then
-		self:SendCommMessage(self.DEFAULT_PREFIX, "request," .. 2, "GUILD")
-		print(self.CHAT_PREFIX .. "Requesting layer hop to layer 2.")
-	else
-		self:SendCommMessage(self.DEFAULT_PREFIX, "request," .. 1, "GUILD")
-		print(self.CHAT_PREFIX .. "Requesting layer hop to layer 1.")
-	end
+	self:SendCommMessage(self.DEFAULT_PREFIX, "requestswitch," .. currentLayer, "GUILD")
+	print(self.CHAT_PREFIX .. "Requesting layer hop from layer id: " .. currentLayer .. " to another layer.")
 end
 
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
@@ -125,8 +120,8 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 	end
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
 		local command, data = strsplit(",", msg)
-		if command == "request" then
-			if tonumber(data) == currentLayer and UnitIsGroupLeader("player") then
+		if command == "requestswitch" then
+			if tonumber(data) ~= currentLayer and UnitIsGroupLeader("player") then
 				InviteByName(sender)
 			end
 		end
@@ -138,7 +133,7 @@ function LayerHopper:ChatCommand(input)
 end
 
 function UpdateLayerFromUnit(unit)
-	if IsInInstance() then
+	if IsInInstance() or C_Map.GetBestMapForUnit("player") ~= 1454 then
 		return
 	end
 	local guid = UnitGUID(unit)
@@ -148,15 +143,11 @@ function UpdateLayerFromUnit(unit)
 			local layer = 0
 			local _,_,_,_,i = strsplit("-", guid)
 			if i then
-				if tonumber(i) < 500 then
-					layer = 1
-				else
-					layer = 2
-				end
+				layer = tonumber(i)
 			end
 			if layer > 0 then
 				currentLayer = layer
-				LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/layer" .. currentLayer
+				-- LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
 			end
 		end
 	end
