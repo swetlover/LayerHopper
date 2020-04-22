@@ -58,7 +58,7 @@ function LayerHopper:OnInitialize()
 		OnEnter = function(self)
 			local layerText = ""
 			if currentLayer == 0 then
-				layerText = "Unknown Layer. Target any NPC in Orgrimmar/Stormwind to get current layer."
+				layerText = "Unknown Layer. Target any NPC in " .. GetFactionCity() .. " to get current layer."
 			else
 				layerText = "Current Layer Id: " .. currentLayer
 			end
@@ -81,15 +81,15 @@ function LayerHopper:OnInitialize()
 end
 
 function LayerHopper:PLAYER_TARGET_CHANGED()
-	UpdateLayerFromUnit("target")
+	self:UpdateLayerFromUnit("target")
 end
 
 function LayerHopper:UPDATE_MOUSEOVER_UNIT()
-	UpdateLayerFromUnit("mouseover")
+	self:UpdateLayerFromUnit("mouseover")
 end
 
 function LayerHopper:NAME_PLATE_UNIT_ADDED(unit)
-	UpdateLayerFromUnit(unit)
+	self:UpdateLayerFromUnit(unit)
 end
 
 function LayerHopper:GROUP_JOINED()
@@ -99,15 +99,26 @@ function LayerHopper:GROUP_JOINED()
 	end
 end
 
+function LayerHopper:ZONE_CHANGED()
+	currentLayer = 0
+end
+
+function LayerHopper:PLAYER_ENTERING_WORLD()
+	currentLayer = 0
+end
+
 function LayerHopper:RequestLayerHop()
 	if IsInGroup() then
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in a group.")
 		return
 	elseif currentLayer == 0 then
-		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC in Orgrimmar/Stormwind to get current layer.")
+		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC in " .. GetFactionCity() .. " to get current layer.")
 		return
 	elseif IsInInstance() then
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in an instance or battleground.")
+		return
+	elseif IsNotInOrgOrSW() then
+		print(self.CHAT_PREFIX .. "Can't request layer hop while not in " .. GetFactionCity() .. ".")
 		return
 	end
 	self:SendCommMessage(self.DEFAULT_PREFIX, "requestswitch," .. currentLayer, "GUILD")
@@ -115,13 +126,13 @@ function LayerHopper:RequestLayerHop()
 end
 
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	if not self.db.global.autoinvite or IsInInstance() then
+	if not self.db.global.autoinvite or IsInInstance() or IsNotInOrgOrSW() or (IsInGroup() and not UnitIsGroupLeader("player")) then
 		return
 	end
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
 		local command, data = strsplit(",", msg)
 		if command == "requestswitch" then
-			if tonumber(data) ~= currentLayer and (not IsInGroup() or UnitIsGroupLeader("player")) then
+			if tonumber(data) ~= currentLayer then
 				InviteUnit(sender)
 			end
 		end
@@ -132,8 +143,8 @@ function LayerHopper:ChatCommand(input)
   LibStub("AceConfigDialog-3.0"):Open("LayerHopper")
 end
 
-function UpdateLayerFromUnit(unit)
-	if IsInInstance() or (UnitFactionGroup("player") == "Horde" and C_Map.GetBestMapForUnit("player") ~= 1454) or (UnitFactionGroup("player") == "Alliance" and C_Map.GetBestMapForUnit("player") ~= 1453) then
+function LayerHopper:UpdateLayerFromUnit(unit)
+	if IsInInstance() or IsNotInOrgOrSW() then
 		return
 	end
 	local guid = UnitGUID(unit)
@@ -153,6 +164,10 @@ function UpdateLayerFromUnit(unit)
 	end
 end
 
+function IsNotInOrgOrSW()
+	return (UnitFactionGroup("player") == "Horde" and C_Map.GetBestMapForUnit("player") ~= 1454) or (UnitFactionGroup("player") == "Alliance" and C_Map.GetBestMapForUnit("player") ~= 1453)
+end
+
 function IsGuidOwned(guid)
 	tip:SetOwner(WorldFrame, 'ANCHOR_NONE')
 	tip:SetHyperlink('unit:' .. guid or '')
@@ -161,8 +176,18 @@ function IsGuidOwned(guid)
 	return strfind(subtitle, "'s Companion")
 end
 
+function GetFactionCity()
+	if UnitFactionGroup("player") == "Horde" then
+		return "Orgrimmar"
+	else
+		return "Stormwind"
+	end
+end
+
 LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
 LayerHopper:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 LayerHopper:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 LayerHopper:RegisterEvent("GROUP_JOINED")
+LayerHopper:RegisterEvent("ZONE_CHANGED")
+LayerHopper:RegisterEvent("PLAYER_ENTERING_WORLD")
 LayerHopper:RegisterComm(LayerHopper.DEFAULT_PREFIX)
