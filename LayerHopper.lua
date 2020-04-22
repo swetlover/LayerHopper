@@ -39,7 +39,7 @@ end
 
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 112
+LayerHopper.COMM_VER = 113
 LayerHopper.currentLayerId = -1
 LayerHopper.foundOldVersion = false
 
