@@ -57,10 +57,14 @@ function LayerHopper:OnInitialize()
 		end,
 		OnEnter = function(self)
 			local layerText = ""
+			local layerGuess = 1
+			if currentLayer > 54 then -- this is a guess based on number of zones in classic https://wow.gamepedia.com/UiMapID/Classic
+				layerGuess = 2
+			end
 			if currentLayer == 0 then
 				layerText = "Unknown Layer. Target any NPC in " .. GetFactionCity() .. " to get current layer."
 			else
-				layerText = "Current Layer Id: " .. currentLayer
+				layerText = "Current Layer Id: " .. currentLayer .. " (probably layer " .. layerGuess .. ")"
 			end
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 			GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r v"..GetAddOnMetadata("LayerHopper", "Version"))
