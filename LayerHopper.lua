@@ -8,7 +8,8 @@ LayerHopper.options = {
 	args = {
 		desc = {
 			type = "description",
-			name = "|CffDEDE42Layer Hopper Config (You can type /lh to open this).",
+			name = "|CffDEDE42Layer Hopper Config (You can type /lh to open this).\n"
+					.. "Auto inviting will be disabled automatically if inside an instance or battleground and when in a battleground queue.\n",
 			fontSize = "medium",
 			order = 1,
 		},
@@ -39,7 +40,7 @@ end
 
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 113
+LayerHopper.COMM_VER = 114
 LayerHopper.currentLayerId = -1
 LayerHopper.foundOldVersion = false
 
@@ -120,7 +121,7 @@ function LayerHopper:RequestLayerHop()
 end
 
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	if self.currentLayerId < 0 or self.foundOldVersion or not self.db.global.autoinvite or IsInInstance() or (IsInGroup() and not UnitIsGroupLeader("player")) then
+	if self.currentLayerId < 0 or not self.db.global.autoinvite or IsInBgQueue() or IsInInstance() or (IsInGroup() and not UnitIsGroupLeader("player")) then
 		return
 	end
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
@@ -191,6 +192,17 @@ function GetLayerGuess(layerId)
 		layerGuess = 2
 	end
 	return layerGuess
+end
+
+function IsInBgQueue()
+	local status, mapName, instanceID, minlevel, maxlevel;
+	for i = 1, MAX_BATTLEFIELD_QUEUES do
+		status, mapName, instanceID, minlevel, maxlevel, teamSize = GetBattlefieldStatus(i);
+		if status == "queued" or status == "confirm" then
+			return true
+		end
+	end
+	return false
 end
 
 LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
