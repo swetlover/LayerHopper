@@ -57,14 +57,10 @@ function LayerHopper:OnInitialize()
 		end,
 		OnEnter = function(self)
 			local layerText = ""
-			local layerGuess = 1
-			if currentLayer > 54 then -- this is a guess based on number of zones in classic https://wow.gamepedia.com/UiMapID/Classic
-				layerGuess = 2
-			end
 			if currentLayer == 0 then
 				layerText = "Unknown Layer. Target any NPC in " .. GetFactionCity() .. " to get current layer."
 			else
-				layerText = "Current Layer Id: " .. currentLayer .. " (probably layer " .. layerGuess .. ")"
+				layerText = "Current Layer Id: " .. currentLayer .. " (probably layer " .. GetLayerGuess() .. ")"
 			end
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 			GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r v"..GetAddOnMetadata("LayerHopper", "Version"))
@@ -99,16 +95,18 @@ end
 function LayerHopper:GROUP_JOINED()
 	if not UnitIsGroupLeader("player") then
 		currentLayer = 0
-		-- LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
+		LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
 	end
 end
 
 function LayerHopper:ZONE_CHANGED()
 	currentLayer = 0
+	LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
 end
 
 function LayerHopper:PLAYER_ENTERING_WORLD()
 	currentLayer = 0
+	LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
 end
 
 function LayerHopper:RequestLayerHop()
@@ -162,7 +160,7 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 			end
 			if layer > 0 then
 				currentLayer = layer
-				-- LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
+				LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/layer" .. GetLayerGuess()
 			end
 		end
 	end
@@ -186,6 +184,17 @@ function GetFactionCity()
 	else
 		return "Stormwind"
 	end
+end
+
+function GetLayerGuess()
+	if currentLayer == 0 then
+		return 0
+	end
+	local layerGuess = 1
+	if currentLayer > 54 then -- this is a guess based on number of zones in classic https://wow.gamepedia.com/UiMapID/Classic
+		layerGuess = 2
+	end
+	return layerGuess
 end
 
 LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
