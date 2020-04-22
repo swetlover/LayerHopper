@@ -58,7 +58,7 @@ function LayerHopper:OnInitialize()
 		OnEnter = function(self)
 			local layerText = ""
 			if currentLayer == 0 then
-				layerText = "Unknown Layer. Target any NPC in Orgrimmar to get current layer."
+				layerText = "Unknown Layer. Target any NPC in Orgrimmar/Stormwind to get current layer."
 			else
 				layerText = "Current Layer Id: " .. currentLayer
 			end
@@ -104,7 +104,7 @@ function LayerHopper:RequestLayerHop()
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in a group.")
 		return
 	elseif currentLayer == 0 then
-		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC in Orgrimmar to get current layer.")
+		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC in Orgrimmar/Stormwind to get current layer.")
 		return
 	elseif IsInInstance() then
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in an instance or battleground.")
@@ -133,7 +133,7 @@ function LayerHopper:ChatCommand(input)
 end
 
 function UpdateLayerFromUnit(unit)
-	if IsInInstance() or C_Map.GetBestMapForUnit("player") ~= 1454 then
+	if IsInInstance() or (UnitFactionGroup("player") == "Horde" and C_Map.GetBestMapForUnit("player") ~= 1454) or (UnitFactionGroup("player") == "Alliance" and C_Map.GetBestMapForUnit("player") ~= 1453) then
 		return
 	end
 	local guid = UnitGUID(unit)
