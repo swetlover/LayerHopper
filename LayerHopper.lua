@@ -121,8 +121,8 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
 		local command, data = strsplit(",", msg)
 		if command == "requestswitch" then
-			if tonumber(data) ~= currentLayer and UnitIsGroupLeader("player") then
-				InviteByName(sender)
+			if tonumber(data) ~= currentLayer and (not IsInGroup() or UnitIsGroupLeader("player")) then
+				InviteUnit(sender)
 			end
 		end
 	end
