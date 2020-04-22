@@ -125,7 +125,7 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 	end
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
 		local command, ver, data = strsplit(",", msg)
-		if ver ~= self.COMM_VER then
+		if tonumber(ver) ~= self.COMM_VER then
 			if not self.foundOldVersion then
 				print(self.CHAT_PREFIX .. "You are running an old version of Layer Hopper, please update from curseforge!")
 				self.foundOldVersion = true
