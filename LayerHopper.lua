@@ -99,11 +99,6 @@ function LayerHopper:GROUP_JOINED()
 	end
 end
 
-function LayerHopper:ZONE_CHANGED()
-	self.currentLayerId = -1
-	self:UpdateIcon()
-end
-
 function LayerHopper:PLAYER_ENTERING_WORLD()
 	self.currentLayerId = -1
 	self:UpdateIcon()
@@ -203,6 +198,5 @@ LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
 LayerHopper:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 LayerHopper:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 LayerHopper:RegisterEvent("GROUP_JOINED")
-LayerHopper:RegisterEvent("ZONE_CHANGED")
 LayerHopper:RegisterEvent("PLAYER_ENTERING_WORLD")
 LayerHopper:RegisterComm(LayerHopper.DEFAULT_PREFIX)
