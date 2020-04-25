@@ -139,13 +139,13 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 		layerId = tonumber(layerId)
 		minLayerId = tonumber(minLayerId)
 		maxLayerId = tonumber(maxLayerId)
-		if ver > self.COMM_VER then
-			if not self.foundOldVersion then
+		if ver ~= self.COMM_VER then
+			if ver > self.COMM_VER and not self.foundOldVersion then
 				print(self.CHAT_PREFIX .. "You are running an old version of Layer Hopper, please update from curseforge!")
 				self.foundOldVersion = true
-				if floor(ver / 10) > floor(self.COMM_VER / 10) then
-					return
-				end
+			end
+			if floor(ver / 10) ~= floor(self.COMM_VER / 10) then
+				return
 			end
 		end
 		if command == LayerHopper.RequestLayerSwitchPrefix then
