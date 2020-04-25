@@ -43,7 +43,7 @@ LayerHopper.RequestLayerMinMaxPrefix = "LH_rlmm"
 LayerHopper.SendLayerMinMaxPrefix = "LH_slmm"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 120
+LayerHopper.COMM_VER = 121
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
@@ -130,9 +130,7 @@ function LayerHopper:RequestLayerHop()
 end
 
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	if self.currentLayerId < 0 or not self.db.global.autoinvite or IsInBgQueue() or IsInInstance() or (IsInGroup() and not UnitIsGroupLeader("player")) then
-		return
-	end
+	print(msg .. " " .. sender)
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
 		local command, ver, layerId, minLayerId, maxLayerId = strsplit(",", msg)
 		ver = tonumber(ver)
@@ -152,7 +150,7 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
 			local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
 			local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
-			if layerGuess > 0 and myLayerGuess > 0 and layerGuess ~= myLayerGuess then
+			if layerGuess > 0 and myLayerGuess > 0 and layerGuess ~= myLayerGuess and self.db.global.autoinvite and not IsInBgQueue() and not IsInInstance() and CanInvite() then
 				InviteUnit(sender)
 			end
 			if minOrMaxUpdated then
@@ -160,15 +158,18 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 			end
 		elseif command == LayerHopper.RequestLayerMinMaxPrefix then
 			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
-			if not self.SendCurrentMinMaxTimer and minOrMaxUpdated and self.minLayerId >= 0 and self.maxLayerId >= 0 then
+			if not self.SendCurrentMinMaxTimer and self.minLayerId >= 0 and self.maxLayerId >= 0 then
 				self.SendCurrentMinMaxTimer = self:ScheduleTimer("SendCurrentMinMax", random() * 5)
 			end
 			if minOrMaxUpdated then
 				self:UpdateIcon()
 			end
 		elseif command == LayerHopper.SendLayerMinMaxPrefix then
-			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
-			if self.SendCurrentMinMaxTimer and minOrMaxUpdated or (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId) then
+			local minUpdated = self:UpdateMin(minLayerId)
+			local maxUpdated = self:UpdateMax(maxLayerId)
+			local minAndMaxUpdated = minUpdated and maxUpdated
+			local minOrMaxUpdated = minUpdated or maxUpdated
+			if self.SendCurrentMinMaxTimer and (minAndMaxUpdated or (minUpdated and self.maxLayerId == maxLayerId) or (maxUpdated and self.minLayerId == minLayerId) or (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId)) then
 				self:CancelTimer(self.SendCurrentMinMaxTimer)
 				self.SendCurrentMinMaxTimer = nil
 			end
@@ -227,16 +228,23 @@ function LayerHopper:UpdateIcon()
 end
 
 function LayerHopper:UpdateMinMax(min, max)
-	local valueUpdated = false
+	return self:UpdateMin(min) or self:UpdateMax(max)
+end
+
+function LayerHopper:UpdateMin(min)
 	if min >= 0 and (self.minLayerId < 0 or min < self.minLayerId) then
 		self.minLayerId = min
-		valueUpdated = true
+		return true
 	end
+	return false
+end
+
+function LayerHopper:UpdateMax(max)
 	if max >= 0 and (self.maxLayerId < 0 or max > self.maxLayerId) then
 		self.maxLayerId = max
-		valueUpdated = true
+		return true
 	end
-	return valueUpdated
+	return false
 end
 
 local tip = CreateFrame('GameTooltip', 'GuardianOwnerTooltip', nil, 'GameTooltipTemplate')
@@ -274,6 +282,10 @@ function IsInBgQueue()
 		end
 	end
 	return false
+end
+
+function CanInvite()
+	return not IsInGroup() or (IsInGroup() and (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")))
 end
 
 LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
