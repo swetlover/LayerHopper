@@ -43,7 +43,7 @@ LayerHopper.RequestLayerMinMaxPrefix = "LH_rlmm"
 LayerHopper.SendLayerMinMaxPrefix = "LH_slmm"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 122
+LayerHopper.COMM_VER = 123
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
@@ -111,7 +111,8 @@ end
 function LayerHopper:PLAYER_ENTERING_WORLD()
 	self.currentLayerId = -1
 	self:UpdateIcon()
-	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerMinMaxPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
+	if self.minLayerId < 0 or self.maxLayerId < 0 then
+	end
 end
 
 function LayerHopper:RequestLayerHop()
