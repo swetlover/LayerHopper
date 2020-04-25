@@ -112,6 +112,7 @@ function LayerHopper:PLAYER_ENTERING_WORLD()
 	self.currentLayerId = -1
 	self:UpdateIcon()
 	if self.minLayerId < 0 or self.maxLayerId < 0 then
+		self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerMinMaxPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
 	end
 end
 
