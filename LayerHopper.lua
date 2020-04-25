@@ -1,4 +1,5 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
+LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
 
 LayerHopper.options = {
@@ -8,7 +9,7 @@ LayerHopper.options = {
 	args = {
 		desc = {
 			type = "description",
-			name = "|CffDEDE42Layer Hopper Config (You can type /lh to open this).\n"
+			name = "|CffDEDE42Layer Hopper Config (You can type /lh config to open this).\n"
 					.. "Auto inviting will be disabled automatically if inside an instance or battleground and when in a battleground queue.\n",
 			fontSize = "medium",
 			order = 1,
@@ -40,10 +41,12 @@ end
 
 LayerHopper.RequestLayerSwitchPrefix = "LH_rls"
 LayerHopper.RequestLayerMinMaxPrefix = "LH_rlmm"
+LayerHopper.RequestAllPlayersLayersPrefix = "LH_rapl"
 LayerHopper.SendLayerMinMaxPrefix = "LH_slmm"
+LayerHopper.SendLayerMinMaxWhisperPrefix = "LH_slmmw"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 123
+LayerHopper.COMM_VER = 124
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
@@ -59,7 +62,7 @@ function LayerHopper:OnInitialize()
 			if button == "LeftButton" then
 				LayerHopper:RequestLayerHop()
 			elseif button == "RightButton" then
-				LibStub("AceConfigDialog-3.0"):Open("LayerHopper")
+				LayerHopper:ToggleConfigWindow()
 			end
 		end,
 		OnEnter = function(self)
@@ -76,6 +79,7 @@ function LayerHopper:OnInitialize()
 			GameTooltip:AddLine(layerText)
 			GameTooltip:AddLine("Left click to request a layer hop.")
 			GameTooltip:AddLine("Right click to access Layer Hopper settings.")
+			GameTooltip:AddLine("/lh to see other options")
 			GameTooltip:Show()
 		end,
 		OnLeave = function(self)
@@ -131,8 +135,12 @@ function LayerHopper:RequestLayerHop()
 	print(self.CHAT_PREFIX .. "Requesting layer hop from layer " .. GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId) .. " to another layer.")
 end
 
+function LayerHopper:RequestAllPlayersLayers()
+	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestAllPlayersLayersPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
+end
+
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
+	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) then
 		local command, ver, layerId, minLayerId, maxLayerId = strsplit(",", msg)
 		ver = tonumber(ver)
 		layerId = tonumber(layerId)
@@ -147,38 +155,71 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 				return
 			end
 		end
-		if command == LayerHopper.RequestLayerSwitchPrefix then
-			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
-			local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
-			local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
-			if layerGuess > 0 and myLayerGuess > 0 and layerGuess ~= myLayerGuess and self.db.global.autoinvite and not IsInBgQueue() and not IsInInstance() and CanInvite() then
-				InviteUnit(sender)
+		if distribution == "GUILD" then
+			if command == LayerHopper.RequestLayerSwitchPrefix then
+				local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
+				local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
+				local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
+				if layerGuess > 0 and myLayerGuess > 0 and layerGuess ~= myLayerGuess and self.db.global.autoinvite and not IsInBgQueue() and not IsInInstance() and CanInvite() then
+					InviteUnit(sender)
+				end
+				if minOrMaxUpdated then
+					self:UpdateIcon()
+				end
+			elseif command == LayerHopper.RequestLayerMinMaxPrefix then
+				local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
+				if not self.SendCurrentMinMaxTimer and not (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId) and self.minLayerId >= 0 and self.maxLayerId >= 0 then
+					self.SendCurrentMinMaxTimer = self:ScheduleTimer("SendCurrentMinMax", random() * 5)
+				end
+				if minOrMaxUpdated then
+					self:UpdateIcon()
+				end
+			elseif command == LayerHopper.SendLayerMinMaxPrefix then
+				local minUpdated = self:UpdateMin(minLayerId)
+				local maxUpdated = self:UpdateMax(maxLayerId)
+				local minAndMaxUpdated = minUpdated and maxUpdated
+				local minOrMaxUpdated = minUpdated or maxUpdated
+				if self.SendCurrentMinMaxTimer and (minAndMaxUpdated or (minUpdated and self.maxLayerId == maxLayerId) or (maxUpdated and self.minLayerId == minLayerId) or (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId)) then
+					self:CancelTimer(self.SendCurrentMinMaxTimer)
+					self.SendCurrentMinMaxTimer = nil
+				end
+				if minOrMaxUpdated then
+					self:UpdateIcon()
+				end
+			elseif command == LayerHopper.RequestAllPlayersLayersPrefix then
+				local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
+				self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.SendLayerMinMaxWhisperPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "WHISPER", sender)
+				if minOrMaxUpdated then
+					self:UpdateIcon()
+				end
 			end
-			if minOrMaxUpdated then
-				self:UpdateIcon()
-			end
-		elseif command == LayerHopper.RequestLayerMinMaxPrefix then
-			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
-			if not self.SendCurrentMinMaxTimer and not (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId) and self.minLayerId >= 0 and self.maxLayerId >= 0 then
-				self.SendCurrentMinMaxTimer = self:ScheduleTimer("SendCurrentMinMax", random() * 5)
-			end
-			if minOrMaxUpdated then
-				self:UpdateIcon()
-			end
-		elseif command == LayerHopper.SendLayerMinMaxPrefix then
-			local minUpdated = self:UpdateMin(minLayerId)
-			local maxUpdated = self:UpdateMax(maxLayerId)
-			local minAndMaxUpdated = minUpdated and maxUpdated
-			local minOrMaxUpdated = minUpdated or maxUpdated
-			if self.SendCurrentMinMaxTimer and (minAndMaxUpdated or (minUpdated and self.maxLayerId == maxLayerId) or (maxUpdated and self.minLayerId == minLayerId) or (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId)) then
-				self:CancelTimer(self.SendCurrentMinMaxTimer)
-				self.SendCurrentMinMaxTimer = nil
-			end
-			if minOrMaxUpdated then
-				self:UpdateIcon()
+		elseif distribution == "WHISPER" then
+			if command == LayerHopper.SendLayerMinMaxWhisperPrefix then
+				local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
+				self:PrintPlayerLayerWithVersion(layerId, ver, sender)
 			end
 		end
 	end
+end
+
+function LayerHopper:PrintPlayerLayerWithVersion(layerId, ver, sender)
+	local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
+	local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
+	local versionString = ""
+	if ver < self.COMM_VER then
+		versionString = "|cFFC21807" .. GetVersionString(ver) .. "|r"
+	else
+		versionString = GetVersionString(ver)
+	end
+	local layerString = ""
+	if layerGuess < 0 then
+		layerString = "layer unknown"
+	elseif myLayerGuess > 0 and layerGuess > 0 and myLayerGuess ~= layerGuess then
+		layerString = "|cFF00A86Blayer " .. tostring(layerGuess) .. "|r"
+	else
+		layerString = "layer " .. tostring(layerGuess)
+	end
+	print(self.CHAT_PREFIX .. sender .. ": " .. layerString .. " - " .. versionString)
 end
 
 function LayerHopper:SendCurrentMinMax()
@@ -190,7 +231,26 @@ function LayerHopper:SendCurrentMinMax()
 end
 
 function LayerHopper:ChatCommand(input)
-  LibStub("AceConfigDialog-3.0"):Open("LayerHopper")
+	input = strtrim(input);
+	if input == "config" then
+		self:ToggleConfigWindow()
+	elseif input == "hop" then
+		self:RequestLayerHop()
+	elseif input == "list" then
+		self:RequestAllPlayersLayers()
+	else
+		print("/lh config - Open/close configuration window\n" ..
+			"/lh hop - Request a layer hop\n" ..
+			"/lh list - List layers and versions for all guildies")
+	end
+end
+
+function LayerHopper:ToggleConfigWindow()
+	if LayerHopper.Dialog.OpenFrames["LayerHopper"] then
+		LayerHopper.Dialog:Close("LayerHopper")
+	else
+		LayerHopper.Dialog:Open("LayerHopper")
+	end
 end
 
 function LayerHopper:UpdateLayerFromUnit(unit)
@@ -287,6 +347,14 @@ end
 
 function CanInvite()
 	return not IsInGroup() or (IsInGroup() and (UnitIsGroupLeader("player") or UnitIsGroupAssistant("player")))
+end
+
+function GetVersionString(ver)
+	if ver >= 10 then
+		return GetVersionString(floor(ver/10)) .. "." .. tostring(ver % 10)
+	else
+		return "v" .. tostring(ver)
+	end
 end
 
 LayerHopper:RegisterEvent("PLAYER_TARGET_CHANGED")
