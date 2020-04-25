@@ -43,7 +43,7 @@ LayerHopper.RequestLayerMinMaxPrefix = "LH_rlmm"
 LayerHopper.SendLayerMinMaxPrefix = "LH_slmm"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 121
+LayerHopper.COMM_VER = 122
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
@@ -157,7 +157,7 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 			end
 		elseif command == LayerHopper.RequestLayerMinMaxPrefix then
 			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
-			if not self.SendCurrentMinMaxTimer and self.minLayerId >= 0 and self.maxLayerId >= 0 then
+			if not self.SendCurrentMinMaxTimer and not (self.minLayerId == minLayerId and self.maxLayerId == maxLayerId) and self.minLayerId >= 0 and self.maxLayerId >= 0 then
 				self.SendCurrentMinMaxTimer = self:ScheduleTimer("SendCurrentMinMax", random() * 5)
 			end
 			if minOrMaxUpdated then
