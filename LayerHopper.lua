@@ -125,7 +125,7 @@ function LayerHopper:RequestLayerHop()
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in an instance or battleground.")
 		return
 	end
-	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerSwitchZonePrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
+	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerSwitchPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
 	print(self.CHAT_PREFIX .. "Requesting layer hop from layer " .. GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId) .. " to another layer.")
 end
 
@@ -148,7 +148,7 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 				end
 			end
 		end
-		if command == LayerHopper.RequestLayerSwitchZonePrefix then
+		if command == LayerHopper.RequestLayerSwitchPrefix then
 			local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
 			local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
 			local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
