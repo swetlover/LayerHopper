@@ -130,7 +130,6 @@ function LayerHopper:RequestLayerHop()
 end
 
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	print(msg .. " " .. sender)
 	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and distribution == "GUILD" then
 		local command, ver, layerId, minLayerId, maxLayerId = strsplit(",", msg)
 		ver = tonumber(ver)
