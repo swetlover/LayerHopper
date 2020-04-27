@@ -1,7 +1,7 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
-LayerHopper.VERSION = 140
+LayerHopper.VERSION = 141
 
 function GetVersionString(ver)
 	if ver >= 10 then
@@ -313,7 +313,7 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 	local guid = UnitGUID(unit)
 	if guid ~= nil then
 		local unittype, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
-		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and UnitLevel(unit) > 1 then
+		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and UnitLevel(unit) ~= 1 then
 			local layerId = -1
 			local _,_,_,_,i = strsplit("-", guid)
 			if i then
