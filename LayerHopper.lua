@@ -48,7 +48,7 @@ LayerHopper.SendLayerMinMaxWhisperPrefix = "LH_slmmw"
 LayerHopper.SendResetLayerDataPrefix = "LH_srld"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 130
+LayerHopper.COMM_VER = 131
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
@@ -150,8 +150,14 @@ end
 function LayerHopper:ResetLayerData()
 	local _, _, guildRankIndex = GetGuildInfo("player");
 	if guildRankIndex <= 3 then
+		self.currentLayerId = -1
+		self.minLayerId = -1
+		self.maxLayerId = -1
+		self.paused = true
 		print(self.CHAT_PREFIX .. "Resetting layer data in the guild...")
 		self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.SendResetLayerDataPrefix .. "," .. self.COMM_VER .. ",-1,-1,-1", "GUILD")
+		self:ScheduleTimer("UnPause", 3 + random() * 3)
+		self:UpdateIcon()
 	else
 		print(self.CHAT_PREFIX .. "Can't request layer data reset unless you are class lead or higher rank.")
 	end
@@ -252,7 +258,7 @@ function LayerHopper:PrintPlayerLayerWithVersion(layerId, ver, sender)
 	else
 		layerString = "layer " .. tostring(layerGuess)
 	end
-	print(self.CHAT_PREFIX .. sender .. ": " .. layerString .. " - " .. versionString)
+	print(self.CHAT_PREFIX .. sender .. ": " .. layerString .. " - " .. versionString .. " layer id: " .. layerId)
 end
 
 function LayerHopper:SendCurrentMinMax()
