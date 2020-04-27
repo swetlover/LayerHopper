@@ -1,7 +1,7 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
-LayerHopper.VERSION = 131
+LayerHopper.VERSION = 132
 
 function GetVersionString(ver)
 	if ver >= 10 then
@@ -48,7 +48,6 @@ function LayerHopper:getAutoInvite(info)
 	return self.db.global.autoinvite;
 end
 
-LayerHopper.validZones = {[1411]=true,[1412]=true,[1413]=true,[1416]=true,[1417]=true,[1418]=true,[1419]=true,[1420]=true,[1421]=true,[1422]=true,[1423]=true,[1424]=true,[1425]=true,[1426]=true,[1427]=true,[1428]=true,[1429]=true,[1430]=true,[1431]=true,[1432]=true,[1433]=true,[1434]=true,[1435]=true,[1436]=true,[1437]=true,[1438]=true,[1439]=true,[1440]=true,[1441]=true,[1442]=true,[1443]=true,[1444]=true,[1445]=true,[1446]=true,[1447]=true,[1448]=true,[1449]=true,[1450]=true,[1451]=true,[1452]=true,[1453]=true,[1454]=true,[1455]=true,[1456]=true,[1457]=true,[1458]=true}
 LayerHopper.RequestLayerSwitchPrefix = "LH_rls"
 LayerHopper.RequestLayerMinMaxPrefix = "LH_rlmm"
 LayerHopper.RequestAllPlayersLayersPrefix = "LH_rapl"
@@ -311,17 +310,16 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 	if IsInInstance() or self.paused then
 		return
 	end
-	local currentZoneId = C_Map.GetBestMapForUnit("player")
 	local guid = UnitGUID(unit)
-	if guid ~= nil and self.validZones[currentZoneId] then
+	if guid ~= nil then
 		local unittype, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
-		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and not IsGuidOwned(guid) then
+		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and UnitLevel(unit) > 1 then
 			local layerId = -1
 			local _,_,_,_,i = strsplit("-", guid)
 			if i then
 				layerId = tonumber(i)
 			end
-			if layerId >= 0 then
+			if self:IsLayerIdValid(layerId) then
 				self.currentLayerId = layerId
 				local minOrMaxUpdated = self:UpdateMinMax(self.currentLayerId, self.currentLayerId)
 				self:UpdateIcon()
@@ -347,7 +345,7 @@ function LayerHopper:UpdateMinMax(min, max)
 end
 
 function LayerHopper:UpdateMin(min)
-	if min >= 0 and (self.minLayerId < 0 or min < self.minLayerId) then
+	if self:IsLayerIdValid(min) and (self.minLayerId < 0 or min < self.minLayerId) then
 		self.minLayerId = min
 		return true
 	end
@@ -355,21 +353,19 @@ function LayerHopper:UpdateMin(min)
 end
 
 function LayerHopper:UpdateMax(max)
-	if max >= 0 and (self.maxLayerId < 0 or max > self.maxLayerId) then
+	if self:IsLayerIdValid(max) and (self.maxLayerId < 0 or max > self.maxLayerId) then
 		self.maxLayerId = max
 		return true
 	end
 	return false
 end
 
-local tip = CreateFrame('GameTooltip', 'GuardianOwnerTooltip', nil, 'GameTooltipTemplate')
-
-function IsGuidOwned(guid)
-	tip:SetOwner(WorldFrame, 'ANCHOR_NONE')
-	tip:SetHyperlink('unit:' .. guid or '')
-	local text = GuardianOwnerTooltipTextLeft2
-	local subtitle = text and text:GetText() or ''
-	return strfind(subtitle, "'s Companion")
+function LayerHopper:IsLayerIdValid(layerId)
+	--Will turn this back on if needed
+	--if self.minLayerId >= 0 and self.maxLayerId >= 0 and self.maxLayerId - self.minLayerId > 100 and ((layerId >= 0 and layerId < self.minLayerId and self.minLayerId - layerId > 200) or (layerId >= 0 and layerId > self.maxLayerId and layerId - self.maxLayerId > 200)) then
+	--	return false
+	--end
+	return layerId >= 0
 end
 
 function GetLayerGuess(layerId, minLayerId, maxLayerId)
