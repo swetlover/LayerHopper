@@ -39,19 +39,22 @@ function LayerHopper:getAutoInvite(info)
 	return self.db.global.autoinvite;
 end
 
+LayerHopper.validZones = {[1411]=true,[1412]=true,[1413]=true,[1416]=true,[1417]=true,[1418]=true,[1419]=true,[1420]=true,[1421]=true,[1422]=true,[1423]=true,[1424]=true,[1425]=true,[1426]=true,[1427]=true,[1428]=true,[1429]=true,[1430]=true,[1431]=true,[1432]=true,[1433]=true,[1434]=true,[1435]=true,[1436]=true,[1437]=true,[1438]=true,[1439]=true,[1440]=true,[1441]=true,[1442]=true,[1443]=true,[1444]=true,[1445]=true,[1446]=true,[1447]=true,[1448]=true,[1449]=true,[1450]=true,[1451]=true,[1452]=true,[1453]=true,[1454]=true,[1455]=true,[1456]=true,[1457]=true,[1458]=true}
 LayerHopper.RequestLayerSwitchPrefix = "LH_rls"
 LayerHopper.RequestLayerMinMaxPrefix = "LH_rlmm"
 LayerHopper.RequestAllPlayersLayersPrefix = "LH_rapl"
 LayerHopper.SendLayerMinMaxPrefix = "LH_slmm"
 LayerHopper.SendLayerMinMaxWhisperPrefix = "LH_slmmw"
+LayerHopper.SendResetLayerDataPrefix = "LH_srld"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
 LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
-LayerHopper.COMM_VER = 124
+LayerHopper.COMM_VER = 130
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
 LayerHopper.foundOldVersion = false
 LayerHopper.SendCurrentMinMaxTimer = nil
+LayerHopper.paused = false
 
 function LayerHopper:OnInitialize()
 	self.LayerHopperLauncher = LibStub("LibDataBroker-1.1"):NewDataObject("LayerHopper", {
@@ -67,7 +70,9 @@ function LayerHopper:OnInitialize()
 		end,
 		OnEnter = function(self)
 			local layerText = ""
-			if LayerHopper.currentLayerId < 0 then
+			if LayerHopper.paused then
+				layerText = "Resetting layer data for the guild. Should only take a few more seconds..."
+			elseif LayerHopper.currentLayerId < 0 then
 				layerText = "Unknown Layer. Target any NPC or mob to get current layer.\n(layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
 			elseif not MinMaxValid(LayerHopper.minLayerId, LayerHopper.maxLayerId) then
 				layerText = "Min/max layer IDs are unknown. Need more data from guild to determine current layer\n(but you can still request a layer switch). (layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
@@ -115,7 +120,7 @@ end
 function LayerHopper:PLAYER_ENTERING_WORLD()
 	self.currentLayerId = -1
 	self:UpdateIcon()
-	if self.minLayerId < 0 or self.maxLayerId < 0 then
+	if not self.paused and (self.minLayerId < 0 or self.maxLayerId < 0) then
 		self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerMinMaxPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
 	end
 end
@@ -130,6 +135,9 @@ function LayerHopper:RequestLayerHop()
 	elseif IsInInstance() then
 		print(self.CHAT_PREFIX .. "Can't request layer hop while in an instance or battleground.")
 		return
+	elseif self.paused then
+		print(self.CHAT_PREFIX .. "Resetting layer data for the guild. Should only take a few more seconds...")
+		return
 	end
 	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerSwitchPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
 	print(self.CHAT_PREFIX .. "Requesting layer hop from layer " .. GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId) .. " to another layer.")
@@ -139,8 +147,18 @@ function LayerHopper:RequestAllPlayersLayers()
 	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestAllPlayersLayersPrefix .. "," .. self.COMM_VER .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
 end
 
+function LayerHopper:ResetLayerData()
+	local _, _, guildRankIndex = GetGuildInfo("player");
+	if guildRankIndex <= 3 then
+		print(self.CHAT_PREFIX .. "Resetting layer data in the guild...")
+		self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.SendResetLayerDataPrefix .. "," .. self.COMM_VER .. ",-1,-1,-1", "GUILD")
+	else
+		print(self.CHAT_PREFIX .. "Can't request layer data reset unless you are class lead or higher rank.")
+	end
+end
+
 function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
-	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) then
+	if sender ~= UnitName("player") and strlower(prefix) == strlower(self.DEFAULT_PREFIX) and not self.paused then
 		local command, ver, layerId, minLayerId, maxLayerId = strsplit(",", msg)
 		ver = tonumber(ver)
 		layerId = tonumber(layerId)
@@ -192,6 +210,21 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 				if minOrMaxUpdated then
 					self:UpdateIcon()
 				end
+			elseif command == LayerHopper.SendResetLayerDataPrefix then
+				for i=1,GetNumGuildMembers() do
+					local nameWithRealm, rank, rankIndex = GetGuildRosterInfo(i)
+					local name, realm = strsplit("-", nameWithRealm)
+					if name == sender and rankIndex <= 3 then
+						self.currentLayerId = -1
+						self.minLayerId = -1
+						self.maxLayerId = -1
+						self.paused = true
+						print(self.CHAT_PREFIX .. sender .. " requested a reset of layer data for the guild.")
+						self:ScheduleTimer("UnPause", 3 + random() * 3)
+						self:UpdateIcon()
+						return
+					end
+				end
 			end
 		elseif distribution == "WHISPER" then
 			if command == LayerHopper.SendLayerMinMaxWhisperPrefix then
@@ -230,6 +263,10 @@ function LayerHopper:SendCurrentMinMax()
 	end
 end
 
+function LayerHopper:UnPause()
+	self.paused = false
+end
+
 function LayerHopper:ChatCommand(input)
 	input = strtrim(input);
 	if input == "config" then
@@ -238,10 +275,13 @@ function LayerHopper:ChatCommand(input)
 		self:RequestLayerHop()
 	elseif input == "list" then
 		self:RequestAllPlayersLayers()
+	elseif input == "reset" then
+		self:ResetLayerData()
 	else
 		print("/lh config - Open/close configuration window\n" ..
 			"/lh hop - Request a layer hop\n" ..
-			"/lh list - List layers and versions for all guildies")
+			"/lh list - List layers and versions for all guildies\n" ..
+			"/lh reset - Reset layer data for all guildies. (can only be done by class lead rank or above)")
 	end
 end
 
@@ -254,12 +294,12 @@ function LayerHopper:ToggleConfigWindow()
 end
 
 function LayerHopper:UpdateLayerFromUnit(unit)
-	if IsInInstance() then
+	if IsInInstance() or self.paused then
 		return
 	end
-	self.currentZoneId = C_Map.GetBestMapForUnit("player")
+	local currentZoneId = C_Map.GetBestMapForUnit("player")
 	local guid = UnitGUID(unit)
-	if guid ~= nil then
+	if guid ~= nil and self.validZones[currentZoneId] then
 		local unittype, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
 		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and not IsGuidOwned(guid) then
 			local layerId = -1
