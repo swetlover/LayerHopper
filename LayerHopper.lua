@@ -1,7 +1,7 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
-LayerHopper.VERSION = 141
+LayerHopper.VERSION = 150
 
 function GetVersionString(ver)
 	if ver >= 10 then
@@ -26,10 +26,18 @@ LayerHopper.options = {
 		autoinvite = {
 			type = "toggle",
 			name = "Auto Invite",
-			desc = "Enable auto invites for layer switch requests in the guild.",
+			desc = "Enable auto invites for layer switch requests in the guild (if you turn this off you cannot be used by other guildies to switch layers).",
 			order = 2,
 			get = "getAutoInvite",
 			set = "setAutoInvite",
+		},
+		minimap = {
+			type = "toggle",
+			name = "Minimap Button",
+			desc = "Enable minimap button (allows for quick layer hop requests and shows current layer).\nWill require a /reload if hiding the button.",
+			order = 3,
+			get = "getMinimap",
+			set = "setMinimap",
 		},
 	},
 }
@@ -37,6 +45,7 @@ LayerHopper.options = {
 LayerHopper.optionDefaults = {
 	global = {
 		autoinvite = true,
+		hide = false,
 	},
 }
 
@@ -46,6 +55,19 @@ end
 
 function LayerHopper:getAutoInvite(info)
 	return self.db.global.autoinvite;
+end
+
+function LayerHopper:setMinimap(info, value)
+	self.db.global.hide = not value;
+	if self.db.global.hide then
+		self.icon:Hide("LayerHopper")
+	else
+		self.icon:Show("LayerHopper")
+	end
+end
+
+function LayerHopper:getMinimap(info)
+	return not self.db.global.hide;
 end
 
 LayerHopper.RequestLayerSwitchPrefix = "LH_rls"
@@ -62,6 +84,7 @@ LayerHopper.currentLayerId = -1
 LayerHopper.foundOldVersion = false
 LayerHopper.SendCurrentMinMaxTimer = nil
 LayerHopper.paused = false
+LayerHopper.layerIdRange = 100 -- this is a guess based on anecdotal data of max layer id spread for a single layer
 
 function LayerHopper:OnInitialize()
 	self.LayerHopperLauncher = LibStub("LibDataBroker-1.1"):NewDataObject("LayerHopper", {
@@ -81,10 +104,15 @@ function LayerHopper:OnInitialize()
 				layerText = "Resetting layer data for the guild. Should only take a few more seconds..."
 			elseif LayerHopper.currentLayerId < 0 then
 				layerText = "Unknown Layer. Target any NPC or mob to get current layer.\n(layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
-			elseif not MinMaxValid(LayerHopper.minLayerId, LayerHopper.maxLayerId) then
-				layerText = "Min/max layer IDs are unknown. Need more data from guild to determine current layer\n(but you can still request a layer switch). (layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
+			elseif not LayerHopper:MinMaxValid(LayerHopper.minLayerId, LayerHopper.maxLayerId) then
+				if LayerHopper.minLayerId < 0 or LayerHopper.maxLayerId < 0 then
+					layerText = "Min/max layer IDs are unknown.\n"
+				else
+					layerText = "Min/max layer ID range is not large enough.\n"
+				end
+				layerText = layerText .. "Need more data from guild to determine current layer.\n (layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
 			else
-				layerText = "Current Layer: " .. GetLayerGuess(LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId) .. "\n(layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
+				layerText = "Current Layer: " .. LayerHopper:GetLayerGuess(LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId) .. "\n(layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
 			end
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 			GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r " .. GetVersionString(LayerHopper.VERSION))
@@ -98,11 +126,13 @@ function LayerHopper:OnInitialize()
 			GameTooltip:Hide()
 		end
 	})
-	LibStub("LibDBIcon-1.0"):Register("LayerHopper", self.LayerHopperLauncher, LayerHopperOptions)
 
 	self.db = LibStub("AceDB-3.0"):New("LayerHopperOptions", LayerHopper.optionDefaults, "Default");
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("LayerHopper", LayerHopper.options);
 	self.LayerHopperOptions = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("LayerHopper", "LayerHopper");
+
+	self.icon = LibStub("LibDBIcon-1.0")
+	self.icon:Register("LayerHopper", self.LayerHopperLauncher, self.db.global)
 end
 
 function LayerHopper:PLAYER_TARGET_CHANGED()
@@ -147,7 +177,7 @@ function LayerHopper:RequestLayerHop()
 		return
 	end
 	self:SendCommMessage(self.DEFAULT_PREFIX, LayerHopper.RequestLayerSwitchPrefix .. "," .. self.VERSION .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
-	print(self.CHAT_PREFIX .. "Requesting layer hop from layer " .. GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId) .. " to another layer.")
+	print(self.CHAT_PREFIX .. "Requesting layer hop from layer " .. self:GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId) .. " to another layer.")
 end
 
 function LayerHopper:RequestAllPlayersLayers()
@@ -189,8 +219,8 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 		if distribution == "GUILD" then
 			if command == LayerHopper.RequestLayerSwitchPrefix then
 				local minOrMaxUpdated = self:UpdateMinMax(minLayerId, maxLayerId)
-				local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
-				local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
+				local layerGuess = self:GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
+				local myLayerGuess = self:GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
 				if layerGuess > 0 and myLayerGuess > 0 and layerGuess ~= myLayerGuess and self.db.global.autoinvite and not IsInBgQueue() and not IsInInstance() and CanInvite() then
 					InviteUnit(sender)
 				end
@@ -249,8 +279,8 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 end
 
 function LayerHopper:PrintPlayerLayerWithVersion(layerId, ver, sender)
-	local layerGuess = GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
-	local myLayerGuess = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
+	local layerGuess = self:GetLayerGuess(layerId, self.minLayerId, self.maxLayerId)
+	local myLayerGuess = self:GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
 	local versionString = ""
 	if ver < self.VERSION then
 		versionString = "|cFFC21807" .. GetVersionString(ver) .. "|r"
@@ -290,11 +320,22 @@ function LayerHopper:ChatCommand(input)
 		self:RequestAllPlayersLayers()
 	elseif input == "reset" then
 		self:ResetLayerData()
+	elseif input == "mmb" then
+		local minimap = not self:getMinimap()
+		self:setMinimap(nil, minimap)
+		local printString = self.CHAT_PREFIX .. "Minimap button "
+		if minimap then
+			printString = printString .. "shown."
+		else
+			printString = printString .. "hidden. (you will need to type /reload to show changes)"
+		end
+		print(printString)
 	else
 		print("/lh config - Open/close configuration window\n" ..
-			"/lh hop - Request a layer hop\n" ..
-			"/lh list - List layers and versions for all guildies\n" ..
-			"/lh reset - Reset layer data for all guildies. (can only be done by class lead rank or above)")
+				"/lh hop - Request a layer hop\n" ..
+				"/lh list - List layers and versions for all guildies\n" ..
+				"/lh reset - Reset layer data for all guildies. (can only be done by class lead rank or above)\n" ..
+				"/lh mmb - Toggle minimap button.")
 	end
 end
 
@@ -311,6 +352,7 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 		return
 	end
 	local guid = UnitGUID(unit)
+	local unitName, _ = UnitName(unit)
 	if guid ~= nil then
 		local unittype, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
 		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and UnitLevel(unit) ~= 1 then
@@ -318,6 +360,13 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 			local _,_,_,_,i = strsplit("-", guid)
 			if i then
 				layerId = tonumber(i)
+			end
+			if layerId >= 0 and not self:IsLayerIdValid(layerId) then
+				print(self.CHAT_PREFIX .. "|cFFC21807YOU HAVE ENCOUNTERED A MOB THAT BREAKS LAYER HOPPER!|r")
+				print(self.CHAT_PREFIX .. "|cFFC21807MOB NAME: " .. tostring(unitName) .. "|r")
+				print(self.CHAT_PREFIX .. "|cFFC21807MOB GUID: " .. tostring(guid) .. "|r")
+				print(self.CHAT_PREFIX .. "|cFFC21807ZONE: " .. tostring(GetSubZoneText()) .. ", " .. tostring(GetZoneText()) .. "|r")
+				print(self.CHAT_PREFIX .. "|cFFC21807PLEASE SEND THIS INFORMATION TO KUTANO (OR REPORT ON GITHUB)!|r")
 			end
 			if self:IsLayerIdValid(layerId) then
 				self.currentLayerId = layerId
@@ -332,11 +381,11 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 end
 
 function LayerHopper:UpdateIcon()
-	local layer = GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
+	local layer = self:GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)
 	if layer < 0 then
-		LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
+		self.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/swap"
 	else
-		LayerHopper.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/layer" .. layer
+		self.LayerHopperLauncher.icon = "Interface/AddOns/LayerHopper/Media/layer" .. layer
 	end
 end
 
@@ -361,15 +410,14 @@ function LayerHopper:UpdateMax(max)
 end
 
 function LayerHopper:IsLayerIdValid(layerId)
-	--Will turn this back on if needed
-	--if self.minLayerId >= 0 and self.maxLayerId >= 0 and self.maxLayerId - self.minLayerId > 100 and ((layerId >= 0 and layerId < self.minLayerId and self.minLayerId - layerId > 200) or (layerId >= 0 and layerId > self.maxLayerId and layerId - self.maxLayerId > 200)) then
-	--	return false
-	--end
+	if self.minLayerId >= 0 and self.maxLayerId >= 0 and self.maxLayerId - self.minLayerId > self.layerIdRange and layerId >= 0 and ((layerId < self.minLayerId and self.minLayerId - layerId > self.layerIdRange * 2) or (layerId > self.maxLayerId and layerId - self.maxLayerId > self.layerIdRange * 2)) then
+		return false
+	end
 	return layerId >= 0
 end
 
-function GetLayerGuess(layerId, minLayerId, maxLayerId)
-	if layerId < 0 or not MinMaxValid(minLayerId, maxLayerId) then
+function LayerHopper:GetLayerGuess(layerId, minLayerId, maxLayerId)
+	if layerId < 0 or not self:MinMaxValid(minLayerId, maxLayerId) then
 		return -1
 	end
 	local layerGuess = 1
@@ -380,8 +428,8 @@ function GetLayerGuess(layerId, minLayerId, maxLayerId)
 	return layerGuess
 end
 
-function MinMaxValid(minLayerId, maxLayerId)
-	return minLayerId >= 0 and maxLayerId >= 0 and maxLayerId - minLayerId > 50 -- this is a guess based on number of zones in classic https://wow.gamepedia.com/UiMapID/Classic
+function LayerHopper:MinMaxValid(minLayerId, maxLayerId)
+	return minLayerId >= 0 and maxLayerId >= 0 and maxLayerId - minLayerId > self.layerIdRange
 end
 
 function IsInBgQueue()
