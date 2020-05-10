@@ -1,7 +1,7 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
-LayerHopper.VERSION = 151
+LayerHopper.VERSION = 152
 
 function GetVersionString(ver)
 	if ver >= 10 then
@@ -360,6 +360,22 @@ function LayerHopper:ToggleConfigWindow()
 	end
 end
 
+local blacklistedNpcIds = {
+	"2671",  -- Mechanical Squirrel
+	"14444", -- Orcish Orphan
+	"14878", -- Jubling
+	"15706", -- Winter Reindeer
+}
+
+function LayerHopper:IsBlacklistedNpcId(npc_id)
+	for _, blacklistedId in pairs(blacklistedNpcIds) do
+		if npc_id == blacklistedId then
+			return true
+		end
+	end
+	return false
+end
+
 function LayerHopper:UpdateLayerFromUnit(unit)
 	if IsInInstance() or self.paused then
 		return
@@ -368,11 +384,10 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 	local unitName, _ = UnitName(unit)
 	if guid ~= nil then
 		local unittype, zero, server_id, instance_id, zone_uid, npc_id, spawn_uid = strsplit("-", guid);
-		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and UnitLevel(unit) ~= 1 then
+		if UnitExists(unit) and not UnitIsPlayer(unit) and unittype ~= "Pet" and UnitLevel(unit) ~= 1 and not self:IsBlacklistedNpcId(npc_id) then
 			local layerId = -1
-			local _,_,_,_,i = strsplit("-", guid)
-			if i then
-				layerId = tonumber(i)
+			if zone_uid then
+				layerId = tonumber(zone_uid)
 			end
 			if layerId >= 0 and not self:IsLayerIdValid(layerId) then
 				print(self.CHAT_PREFIX .. "|cFFC21807YOU HAVE ENCOUNTERED A MOB THAT BREAKS LAYER HOPPER!|r")
