@@ -1,7 +1,9 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
-LayerHopper.VERSION = 152
+LayerHopper.VERSION = 153
+
+local L = LibStub("AceLocale-3.0"):GetLocale("LayerHopper")
 
 function GetVersionString(ver)
 	if ver >= 10 then
@@ -12,29 +14,28 @@ function GetVersionString(ver)
 end
 
 LayerHopper.options = {
-	name = "|TInterface\\AddOns\\LayerHopper\\Media\\swap:24:24:0:5|t LayerHopper " .. GetVersionString(LayerHopper.VERSION),
+	name = "|TInterface\\AddOns\\LayerHopper\\Media\\swap:24:24:0:5|t " .. L["Layer Hopper"] .. " " .. GetVersionString(LayerHopper.VERSION),
 	handler = LayerHopper,
 	type = 'group',
 	args = {
 		desc = {
 			type = "description",
-			name = "|CffDEDE42Layer Hopper Config (You can type /lh config to open this).\n"
-					.. "Auto inviting will be disabled automatically if inside an instance or battleground and when in a battleground queue.\n",
+			name = "|CffDEDE42" .. L["optionsDesc"],
 			fontSize = "medium",
 			order = 1,
 		},
 		autoinvite = {
 			type = "toggle",
-			name = "Auto Invite",
-			desc = "Enable auto invites for layer switch requests in the guild (if you turn this off you cannot be used by other guildies to switch layers).",
+			name = L["Auto Invite"],
+			desc = L["autoInviteDesc"],
 			order = 2,
 			get = "getAutoInvite",
 			set = "setAutoInvite",
 		},
 		minimap = {
 			type = "toggle",
-			name = "Minimap Button",
-			desc = "Enable minimap button (allows for quick layer hop requests and shows current layer).\nWill require a /reload if hiding the button.",
+			name = L["Minimap Button"],
+			desc = L["minimapDesc"],
 			order = 3,
 			get = "getMinimap",
 			set = "setMinimap",
@@ -77,7 +78,7 @@ LayerHopper.SendLayerMinMaxPrefix = "LH_slmm"
 LayerHopper.SendLayerMinMaxWhisperPrefix = "LH_slmmw"
 LayerHopper.SendResetLayerDataPrefix = "LH_srld"
 LayerHopper.DEFAULT_PREFIX = "LayerHopper"
-LayerHopper.CHAT_PREFIX = "|cFFFF69B4[LayerHopper]|r "
+LayerHopper.CHAT_PREFIX = format("|cFFFF69B4[%s]|r ", L["LayerHopper"])
 LayerHopper.minLayerId = -1
 LayerHopper.maxLayerId = -1
 LayerHopper.currentLayerId = -1
@@ -89,7 +90,7 @@ LayerHopper.layerIdRange = 100 -- this is a guess based on anecdotal data of max
 function LayerHopper:OnInitialize()
 	self.LayerHopperLauncher = LibStub("LibDataBroker-1.1"):NewDataObject("LayerHopper", {
 		type = "launcher",
-		text = "LayerHopper",
+		text = L["Layer Hopper"],
 		icon = "Interface/AddOns/LayerHopper/Media/swap",
 		OnClick = function(self, button)
 			if button == "LeftButton" then
@@ -101,25 +102,29 @@ function LayerHopper:OnInitialize()
 		OnEnter = function(self)
 			local layerText = ""
 			if LayerHopper.paused then
-				layerText = "Resetting layer data for the guild. Should only take a few more seconds..."
+				layerText = L["paused"]
 			elseif LayerHopper.currentLayerId < 0 then
-				layerText = "Unknown Layer. Target any NPC or mob to get current layer.\n(layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
+				layerText = format(L["unknownLayer"],
+						LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId)
 			elseif not LayerHopper:MinMaxValid(LayerHopper.minLayerId, LayerHopper.maxLayerId) then
 				if LayerHopper.minLayerId < 0 or LayerHopper.maxLayerId < 0 then
-					layerText = "Min/max layer IDs are unknown.\n"
+					layerText = L["minMaxUnknown"]
 				else
-					layerText = "Min/max layer ID range is not large enough.\n"
+					layerText = L["rangeTooSmall"]
 				end
-				layerText = layerText .. "Need more data from guild to determine current layer.\n (layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
+				layerText = layerText .. "\n" ..
+						format(L["needMoreData"], LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId)
 			else
-				layerText = "Current Layer: " .. LayerHopper:GetLayerGuess(LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId) .. "\n(layer id: " .. LayerHopper.currentLayerId .. ", min: " .. LayerHopper.minLayerId .. ", max: " .. LayerHopper.maxLayerId .. " )"
+				layerText = format(L["currentLayer"],
+						LayerHopper:GetLayerGuess(LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId),
+						LayerHopper.currentLayerId, LayerHopper.minLayerId, LayerHopper.maxLayerId)
 			end
 			GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-			GameTooltip:AddLine("|cFFFFFFFFLayer Hopper|r " .. GetVersionString(LayerHopper.VERSION))
+			GameTooltip:AddLine(format("|cFFFFFFFF%s|r %s", L["Layer Hopper"], GetVersionString(LayerHopper.VERSION)))
 			GameTooltip:AddLine(layerText)
-			GameTooltip:AddLine("Left click to request a layer hop.")
-			GameTooltip:AddLine("Right click to access Layer Hopper settings.")
-			GameTooltip:AddLine("/lh to see other options")
+			GameTooltip:AddLine(L["minimapLeftClickAction"])
+			GameTooltip:AddLine(L["minimapRightClickAction"])
+			GameTooltip:AddLine(L["minimapOtherOptions"])
 			GameTooltip:Show()
 		end,
 		OnLeave = function(self)
@@ -129,7 +134,7 @@ function LayerHopper:OnInitialize()
 
 	self.db = LibStub("AceDB-3.0"):New("LayerHopperOptions", LayerHopper.optionDefaults, "Default");
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("LayerHopper", LayerHopper.options);
-	self.LayerHopperOptions = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("LayerHopper", "LayerHopper");
+	self.LayerHopperOptions = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("LayerHopper", L["Layer Hopper"]);
 
 	self.icon = LibStub("LibDBIcon-1.0")
 	self.icon:Register("LayerHopper", self.LayerHopperLauncher, self.db.global)
@@ -171,23 +176,23 @@ end
 
 function LayerHopper:RequestLayerHop()
 	if not IsInGuild() then
-		print(self.CHAT_PREFIX .. "Layer Hopper only works when you have joined a guild.")
+		print(self.CHAT_PREFIX .. L["noGuildErr"])
 		return
 	elseif IsInGroup() then
-		print(self.CHAT_PREFIX .. "Can't request layer hop while in a group.")
+		print(self.CHAT_PREFIX .. L["inGroupErr"])
 		return
 	elseif self.currentLayerId < 0 then
-		print(self.CHAT_PREFIX .. "Can't request layer hop until your layer is known. Target any NPC or mob to get current layer.")
+		print(self.CHAT_PREFIX .. L["unknownLayerErr"])
 		return
 	elseif IsInInstance() then
-		print(self.CHAT_PREFIX .. "Can't request layer hop while in an instance or battleground.")
+		print(self.CHAT_PREFIX .. L["inInstanceErr"])
 		return
 	elseif self.paused then
-		print(self.CHAT_PREFIX .. "Resetting layer data for the guild. Should only take a few more seconds...")
+		print(self.CHAT_PREFIX .. L["paused"])
 		return
 	end
 	self:SendMessage(LayerHopper.RequestLayerSwitchPrefix .. "," .. self.VERSION .. "," .. self.currentLayerId .. "," .. self.minLayerId .. "," .. self.maxLayerId, "GUILD")
-	print(self.CHAT_PREFIX .. "Requesting layer hop from layer " .. self:GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId) .. " to another layer.")
+	print(self.CHAT_PREFIX .. format(L["requestingHop"], self:GetLayerGuess(self.currentLayerId, self.minLayerId, self.maxLayerId)))
 end
 
 function LayerHopper:RequestAllPlayersLayers()
@@ -204,12 +209,12 @@ function LayerHopper:ResetLayerData()
 		self.minLayerId = -1
 		self.maxLayerId = -1
 		self.paused = true
-		print(self.CHAT_PREFIX .. "Resetting layer data in the guild...")
+		print(self.CHAT_PREFIX .. L["resettingLayerData"])
 		self:SendMessage(LayerHopper.SendResetLayerDataPrefix .. "," .. self.VERSION .. ",-1,-1,-1", "GUILD")
 		self:ScheduleTimer("UnPause", 3 + random() * 3)
 		self:UpdateIcon()
 	else
-		print(self.CHAT_PREFIX .. "Can't request layer data reset unless you are class lead or higher rank.")
+		print(self.CHAT_PREFIX .. L["rankTooLow"])
 	end
 end
 
@@ -222,7 +227,7 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 		maxLayerId = tonumber(maxLayerId)
 		if ver ~= self.VERSION then
 			if ver > self.VERSION and not self.foundOldVersion then
-				print(self.CHAT_PREFIX .. "You are running an old version of Layer Hopper, please update from curseforge!")
+				print(self.CHAT_PREFIX .. L["oldVersionErr"])
 				self.foundOldVersion = true
 			end
 			if floor(ver / 10) ~= floor(self.VERSION / 10) then
@@ -275,7 +280,7 @@ function LayerHopper:OnCommReceived(prefix, msg, distribution, sender)
 						self.minLayerId = -1
 						self.maxLayerId = -1
 						self.paused = true
-						print(self.CHAT_PREFIX .. sender .. " requested a reset of layer data for the guild.")
+						print(self.CHAT_PREFIX .. format(L["playerRequestedLayerReset"], sender))
 						self:ScheduleTimer("UnPause", 3 + random() * 3)
 						self:UpdateIcon()
 						return
@@ -302,13 +307,13 @@ function LayerHopper:PrintPlayerLayerWithVersion(layerId, ver, sender)
 	end
 	local layerString = ""
 	if layerGuess < 0 then
-		layerString = "layer unknown"
+		layerString = L["layer unknown"]
 	elseif myLayerGuess > 0 and layerGuess > 0 and myLayerGuess ~= layerGuess then
-		layerString = "|cFF00A86Blayer " .. tostring(layerGuess) .. "|r"
+		layerString = "|cFF00A86B" .. format(L["layer %s"], tostring(layerGuess)) .. "|r"
 	else
-		layerString = "layer " .. tostring(layerGuess)
+		layerString = format(L["layer %s"], tostring(layerGuess))
 	end
-	print(self.CHAT_PREFIX .. sender .. ": " .. layerString .. " - " .. versionString .. " layer id: " .. layerId)
+	print(self.CHAT_PREFIX .. format(L["printPlayerLayer"], sender, layerString, versionString, layerId))
 end
 
 function LayerHopper:SendCurrentMinMax()
@@ -336,19 +341,22 @@ function LayerHopper:ChatCommand(input)
 	elseif input == "mmb" then
 		local minimap = not self:getMinimap()
 		self:setMinimap(nil, minimap)
-		local printString = self.CHAT_PREFIX .. "Minimap button "
 		if minimap then
-			printString = printString .. "shown."
+			print(self.CHAT_PREFIX .. L["minimapShown"])
 		else
-			printString = printString .. "hidden. (you will need to type /reload to show changes)"
+			print(self.CHAT_PREFIX .. L["minimapHidden"])
 		end
-		print(printString)
 	else
-		print("/lh config - Open/close configuration window\n" ..
-				"/lh hop - Request a layer hop\n" ..
-				"/lh list - List layers and versions for all guildies\n" ..
-				"/lh reset - Reset layer data for all guildies. (can only be done by class lead rank or above)\n" ..
-				"/lh mmb - Toggle minimap button.")
+		print(format("/lh config - %s\n" ..
+				"/lh hop - %s\n" ..
+				"/lh list - %s\n" ..
+				"/lh reset - %s\n" ..
+				"/lh mmb - %s",
+				L["configConsole"],
+				L["layerHopConsole"],
+				L["listLayersConsole"],
+				L["resetLayersConsole"],
+				L["toggleMinimapConsole"]))
 	end
 end
 

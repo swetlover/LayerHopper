@@ -1,9 +1,10 @@
 ﻿## Interface: 11304
-## Title: LayerHopper
+## Title: Layer Hopper
 ## Author: DungFu
-## Version: 1.5.2
+## Version: 1.5.3
 ## Notes: Allows easy and automatic layer hopping within guild
 ## SavedVariablesPerCharacter: LayerHopperOptions
 
 embeds.xml
+Locale\Locales.xml
 LayerHopper.lua
