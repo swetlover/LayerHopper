@@ -1,7 +1,7 @@
 LayerHopper = LibStub("AceAddon-3.0"):NewAddon("LayerHopper", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 LayerHopper.Dialog = LibStub("AceConfigDialog-3.0")
 LayerHopper:RegisterChatCommand("lh", "ChatCommand")
-LayerHopper.VERSION = 153
+LayerHopper.VERSION = 154
 
 local L = LibStub("AceLocale-3.0"):GetLocale("LayerHopper")
 
@@ -369,6 +369,7 @@ function LayerHopper:ToggleConfigWindow()
 end
 
 local blacklistedNpcIds = {
+	"1573",  -- Gryth Thurden <Gryphon Master> (not sure how this mob is spawned in an instance??) https://github.com/DungFu/LayerHopper/issues/4
 	"2671",  -- Mechanical Squirrel
 	"14444", -- Orcish Orphan
 	"14878", -- Jubling
@@ -398,11 +399,12 @@ function LayerHopper:UpdateLayerFromUnit(unit)
 				layerId = tonumber(zone_uid)
 			end
 			if layerId >= 0 and not self:IsLayerIdValid(layerId) then
-				print(self.CHAT_PREFIX .. "|cFFC21807YOU HAVE ENCOUNTERED A MOB THAT BREAKS LAYER HOPPER!|r")
-				print(self.CHAT_PREFIX .. "|cFFC21807MOB NAME: " .. tostring(unitName) .. "|r")
-				print(self.CHAT_PREFIX .. "|cFFC21807MOB GUID: " .. tostring(guid) .. "|r")
-				print(self.CHAT_PREFIX .. "|cFFC21807ZONE: " .. tostring(GetSubZoneText()) .. ", " .. tostring(GetZoneText()) .. "|r")
-				print(self.CHAT_PREFIX .. "|cFFC21807PLEASE SEND THIS INFORMATION TO KUTANO (OR REPORT ON GITHUB)!|r")
+				local errColorMsg = "|cFFC21807%s|r"
+				print(self.CHAT_PREFIX .. format(errColorMsg, L["mobErrTitle"]))
+				print(self.CHAT_PREFIX .. format(errColorMsg, format(L["mobErrName"], tostring(unitName))))
+				print(self.CHAT_PREFIX .. format(errColorMsg, format(L["mobErrGUID"], tostring(guid))))
+				print(self.CHAT_PREFIX .. format(errColorMsg, format(L["mobErrZone"], tostring(GetSubZoneText()) .. ", " .. tostring(GetZoneText()))))
+				print(self.CHAT_PREFIX .. format(errColorMsg, L["mobErrGithub"]))
 			end
 			if self:IsLayerIdValid(layerId) then
 				self.currentLayerId = layerId

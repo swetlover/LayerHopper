@@ -41,3 +41,10 @@ L["layerHopConsole"] = "Request a layer hop"
 L["listLayersConsole"] = "List layers and versions for all guildies"
 L["resetLayersConsole"] = "Reset layer data for all guildies. (can only be done by class lead rank or above)"
 L["toggleMinimapConsole"] = "Toggle minimap button."
+
+-- Mob Error
+L["mobErrTitle"] = "YOU HAVE ENCOUNTERED A MOB THAT BREAKS LAYER HOPPER!"
+L["mobErrName"] = "MOB NAME: %s"
+L["mobErrGUID"] = "MOB GUID: %s"
+L["mobErrZone"] = "ZONE: %s"
+L["mobErrGithub"] = "PLEASE SEND THIS INFORMATION TO KUTANO (OR REPORT ON GITHUB github.com/DungFu/LayerHopper)!"
