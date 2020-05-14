@@ -1,4 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("LayerHopper", "zhCN")
+if (not L) then
+    return;
+end
 
 L["Auto Invite"] = "自动邀请"
 L["autoInviteDesc"] = "对公会成员的位面切换请求启用自动邀请(如果关闭此功能，公会成员将无法通过你来切换位面)."
