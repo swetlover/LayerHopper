@@ -1,4 +1,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("LayerHopper", "koKR")
+if (not L) then
+    return;
+end
 
 L["Auto Invite"] = "Auto Invite"
 L["autoInviteDesc"] = "Enable auto invites for layer switch requests in the guild (if you turn this off you cannot be used by other guildies to switch layers)."
