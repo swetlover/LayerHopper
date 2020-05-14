@@ -1,25 +1,17 @@
-local L = LibStub("AceLocale-3.0"):NewLocale("LayerHopper", "enUS", true, true);
+local L = LibStub("AceLocale-3.0"):NewLocale("LayerHopper", "enUS", true, true)
 
 L["Layer Hopper"] = true
 L["LayerHopper"] = true
-L["optionsDesc"] = "Layer Hopper Config (You can type /lh config to open this).\nAuto inviting will be disabled automatically if inside an instance or battleground and when in a battleground queue.\n"
+L["optionsDesc"] = [=[Layer Hopper Config (You can type /lh config to open this).
+Auto inviting will be disabled automatically if inside an instance or battleground and when in a battleground queue.
+]=]
 L["Auto Invite"] = true
 L["autoInviteDesc"] = "Enable auto invites for layer switch requests in the guild (if you turn this off you cannot be used by other guildies to switch layers)."
 L["Minimap Button"] = true
-L["minimapDesc"] = "Enable minimap button (allows for quick layer hop requests and shows current layer).\nWill require a /reload if hiding the button."
+L["minimapDesc"] = [=[Enable minimap button (allows for quick layer hop requests and shows current layer).
+Will require a /reload if hiding the button.]=]
 L["layer unknown"] = true
 L["layer %s"] = true
-
--- Minimap Icon Text
-L["paused"] = "Resetting layer data for the guild. Should only take a few more seconds..."
-L["unknownLayer"] = "Unknown Layer. Target any NPC or mob to get current layer.\n(layer id: %s, min: %s, max: %s)"
-L["minMaxUnknown"] = "Min/max layer IDs are unknown."
-L["rangeTooSmall"] = "Min/max layer ID range is not large enough."
-L["needMoreData"] = "Need more data from guild to determine current layer.\n(layer id: %s, min: %s, max: %s)"
-L["currentLayer"] = "Current Layer: %s\n(layer id: %s, min: %s, max: %s)"
-L["minimapLeftClickAction"] = "Left click to request a layer hop."
-L["minimapRightClickAction"] = "Right click to access Layer Hopper settings."
-L["minimapOtherOptions"] = "/lh to see other options"
 
 -- Chat Messages
 L["noGuildErr"] = "Layer Hopper only works when you have joined a guild."
@@ -41,6 +33,20 @@ L["layerHopConsole"] = "Request a layer hop"
 L["listLayersConsole"] = "List layers and versions for all guildies"
 L["resetLayersConsole"] = "Reset layer data for all guildies. (can only be done by class lead rank or above)"
 L["toggleMinimapConsole"] = "Toggle minimap button."
+
+-- Minimap Icon Text
+L["paused"] = "Resetting layer data for the guild. Should only take a few more seconds..."
+L["unknownLayer"] = [=[Unknown Layer. Target any NPC or mob to get current layer.
+(layer id: %s, min: %s, max: %s)]=]
+L["minMaxUnknown"] = "Min/max layer IDs are unknown."
+L["rangeTooSmall"] = "Min/max layer ID range is not large enough."
+L["needMoreData"] = [=[Need more data from guild to determine current layer.
+(layer id: %s, min: %s, max: %s)]=]
+L["currentLayer"] = [=[Current Layer: %s
+(layer id: %s, min: %s, max: %s)]=]
+L["minimapLeftClickAction"] = "Left click to request a layer hop."
+L["minimapRightClickAction"] = "Right click to access Layer Hopper settings."
+L["minimapOtherOptions"] = "/lh to see other options"
 
 -- Mob Error
 L["mobErrTitle"] = "YOU HAVE ENCOUNTERED A MOB THAT BREAKS LAYER HOPPER!"
